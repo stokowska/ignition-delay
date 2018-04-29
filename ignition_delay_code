@@ -1,0 +1,88 @@
+import cantera as ct
+import numpy as np
+import matplotlib.pyplot as plt
+
+#gas defining
+
+gas = ct.Solution('gri30.xml')
+P = 101325
+hydro = []
+time_step = 0.0
+T = int(input("What temperature should be at initial state? :"))
+
+#user can choose concentrations
+
+question = True
+while question:
+    ask = input("Would you like to add concentration of hydrogen? Write yes or no: ")
+    if ask == "yes":
+        nH2 = int(input("What concentration of hydrogen would you choose? Write one number in %: "))
+        hydro.append(nH2)
+        question = True
+    if ask == "no":
+        question = False
+
+#checking row of value on axis
+
+for i in range(len(hydro)):
+    
+    if T <= 500 and hydro[i] <= 10 :
+        time_step = 1e10
+        break
+    elif T<= 500 and hydro[i] > 10:
+        time_step = 1e9
+        break
+    elif 800 > T > 500 and hydro[i] <= 10:
+        time_step = 1e4
+        break
+    elif 700 > T > 500 and hydro[i] > 10:
+        time_step = 5e4
+        break
+    elif 800 > T >= 700 and hydro[i] > 10:
+        time_step = 70
+        break
+    elif 1100 > T >= 800 and hydro[i] > 10:
+        time_step = 40
+        break
+    elif 1100 > T >= 800 and hydro[i] <= 10:
+        time_step = 100
+        break
+C = ['r','g', 'b', 'peachpuff', 'fuchsia', 'k']
+
+def calc(conc):
+
+    #conc-concentrations
+    
+    for i in range(len(hydro)):
+        nO2 = (1-conc[i]/100) * 0.21
+        nN2 = (1-conc[i]/100) * 0.79
+        
+        #defining composition of the mixture in string
+        
+        X  =  'H2:'+str(conc[i]/100)+ ',' + 'O2:'+str(nO2) + ',' + 'N2:'+str(nN2)
+        time = []
+        temperature = []
+        t = 0.0
+        
+        #running simulation
+        
+        gas.TPX = T,P,X
+        r = ct.IdealGasConstPressureReactor(gas)
+        sim = ct.ReactorNet([r])
+        
+        while t < time_step:
+            t = sim.step()
+            time.append(t)
+            temperature.append(r.T)
+        
+        #making plot
+        
+        plt.plot(time,temperature, lw=2, color=C[i], label=str(hydro[i]) + '%')
+        plt.xlabel('Time (s)')
+        plt.ylabel('Temperature (K)')
+        plt.legend(loc='upper left')
+        plt.title('Reduced mechanism ignition delay times')
+        plt.xlim(0, time_step)
+        plt.tight_layout()
+
+calc(hydro)
